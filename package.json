@@ -1,0 +1,19 @@
+{
+  "name": "yarnwella",
+  "version": "1.0.0",
+  "description": "A privacy-first end-to-end encrypted messaging client for the WhisperBox API.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check src/app.js"
+  },
+  "keywords": [
+    "e2ee",
+    "messaging",
+    "web-crypto",
+    "privacy"
+  ],
+  "license": "MIT"
+}
