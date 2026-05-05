@@ -49,7 +49,7 @@ The backend is used only for authentication, public key distribution, encrypted 
 - Decryption failures are shown as message-level errors without exposing raw payloads.
 - Production deployments must serve the app over HTTPS.
 
-## API Coverage
+# API Coverage
 
 - `POST /auth/register`
 - `POST /auth/login`
