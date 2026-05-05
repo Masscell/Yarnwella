@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npm run check",
-  "outputDirectory": ".",
+  "public": ".",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/(.*)",
@@ -22,6 +23,10 @@
         {
           "key": "X-Frame-Options",
           "value": "DENY"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
         }
       ]
     }

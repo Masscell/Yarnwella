@@ -405,6 +405,9 @@ async function register(form) {
   render();
 
   try {
+    if (form.password !== form.confirmPassword) {
+      throw new Error("Passwords do not match");
+    }
     const keys = await generateAccountKeys(form.password);
     const response = await request("/auth/register", {
       method: "POST",
@@ -779,13 +782,14 @@ function renderAuth() {
         </div>
         <form id="login-form" class="auth-form">
           <label>Username or Email<input name="username" autocomplete="username" placeholder="Enter your username" required /></label>
-          <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required /></label>
+          <label class="password-field">Password<input name="password" id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required /><button type="button" class="toggle-password" data-target="login-password" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
           <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Signing in..." : "Sign In"}</button>
         </form>
         <form id="register-form" class="auth-form hidden">
           <label>Full Name<input name="displayName" autocomplete="name" minlength="1" maxlength="128" placeholder="Your full name" required /></label>
           <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" placeholder="Choose a username" required /></label>
-          <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Create a strong password" required /></label>
+          <label class="password-field">Password<input name="password" id="register-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Create a strong password" required /><button type="button" class="toggle-password" data-target="register-password" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
+          <label class="password-field">Confirm Password<input name="confirmPassword" id="register-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Confirm your password" required /><button type="button" class="toggle-password" data-target="register-confirm" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
           <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Creating account..." : "Create Account"}</button>
         </form>
       </section>
@@ -956,6 +960,18 @@ app.addEventListener("submit", async (event) => {
 app.addEventListener("click", async (event) => {
   const target = event.target.closest("button");
   if (!target) return;
+
+  // Handle password visibility toggle
+  if (target.classList.contains("toggle-password")) {
+    event.preventDefault();
+    const targetId = target.dataset.target;
+    const input = document.querySelector(`#${targetId}`);
+    if (input) {
+      input.type = input.type === "password" ? "text" : "password";
+      target.classList.toggle("active");
+    }
+    return;
+  }
 
   if (target.dataset.authTab) {
     const loginForm = document.querySelector("#login-form");

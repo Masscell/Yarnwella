@@ -201,6 +201,45 @@ label {
   font-weight: 600;
 }
 
+label.password-field {
+  position: relative;
+}
+
+label.password-field input {
+  padding-right: 44px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  color: var(--muted);
+  transition: color 150ms ease, opacity 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.toggle-password:hover {
+  color: var(--ink);
+  opacity: 1;
+}
+
+.toggle-password.active {
+  color: var(--primary);
+}
+
+.eye-icon {
+  display: block;
+  stroke: currentColor;
+  stroke-width: 0;
+}
+
 input,
 textarea {
   width: 100%;
