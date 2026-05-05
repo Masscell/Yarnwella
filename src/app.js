@@ -768,14 +768,8 @@ function renderAuth() {
           <span></span>
           <span></span>
         </div>
-        <p class="eyebrow">Zero-knowledge messaging</p>
         <h1>YarnWella</h1>
-        <p class="lede">Private conversations encrypted before they leave your browser, built against the WhisperBox E2EE backend.</p>
-        <div class="trust-grid" aria-label="Security properties">
-          <div><strong>AES-GCM</strong><span>Per-message encryption</span></div>
-          <div><strong>RSA-OAEP</strong><span>Recipient key wrapping</span></div>
-          <div><strong>PBKDF2</strong><span>Local private-key vault</span></div>
-        </div>
+        <p class="lede">Private encrypted messaging, built on end-to-end encryption standards.</p>
       </section>
       <section class="auth-panel" aria-label="Authentication">
         ${renderBanner()}
@@ -784,17 +778,16 @@ function renderAuth() {
           <button class="tab" type="button" data-auth-tab="register">Create account</button>
         </div>
         <form id="login-form" class="auth-form">
-          <label>Username<input name="username" autocomplete="username" required /></label>
-          <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
-          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Unlocking..." : "Sign in securely"}</button>
+          <label>Username or Email<input name="username" autocomplete="username" placeholder="Enter your username" required /></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required /></label>
+          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Signing in..." : "Sign In"}</button>
         </form>
         <form id="register-form" class="auth-form hidden">
-          <label>Display name<input name="displayName" autocomplete="name" minlength="1" maxlength="128" required /></label>
-          <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" required /></label>
-          <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></label>
-          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Generating keys..." : "Create encrypted account"}</button>
+          <label>Full Name<input name="displayName" autocomplete="name" minlength="1" maxlength="128" placeholder="Your full name" required /></label>
+          <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" placeholder="Choose a username" required /></label>
+          <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Create a strong password" required /></label>
+          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Creating account..." : "Create Account"}</button>
         </form>
-        <p class="fine-print">Private keys are generated locally and stored only as wrapped encrypted key material.</p>
       </section>
     </main>
   `;
