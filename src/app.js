@@ -766,11 +766,7 @@ function renderAuth() {
   return `
     <main class="auth-screen">
       <section class="brand-panel">
-        <div class="brand-mark" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+        <img class="brand-logo" src="./public/logo.svg" alt="YarnWella logo" />
         <h1>YarnWella</h1>
         <p class="lede">Private encrypted messaging, built on end-to-end encryption standards.</p>
       </section>
@@ -841,9 +837,12 @@ function renderConversations() {
   return `
     <aside class="sidebar">
       <div class="sidebar-head">
-        <div>
-          <p class="eyebrow">Signed in</p>
-          <h2>${escapeHtml(state.auth.user.display_name)}</h2>
+        <div class="signed-in-brand">
+          <img class="app-logo" src="./public/logo.svg" alt="" aria-hidden="true" />
+          <div>
+            <p class="eyebrow">Signed in</p>
+            <h2>${escapeHtml(state.auth.user.display_name)}</h2>
+          </div>
         </div>
         <button class="icon-button" type="button" data-action="logout" title="Log out" aria-label="Log out">out</button>
       </div>
@@ -865,9 +864,7 @@ function renderMessages() {
   if (!state.activeUser) {
     return `
       <section class="chat-empty">
-        <div class="encryption-orbit" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
+        <img class="empty-logo" src="./public/logo.svg" alt="" aria-hidden="true" />
         <h2>Choose a conversation</h2>
         <p>YarnWella encrypts every message locally with AES-GCM, then wraps the message key for the intended recipient.</p>
       </section>
