@@ -16,7 +16,7 @@ Open `http://localhost:4173`. Web Crypto requires a secure context; `localhost` 
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide, code structure, and testing procedures
 - **[REQUIREMENTS.md](./REQUIREMENTS.md)** - Detailed verification of all E2EE requirements
 
-## Encryption Flow
+# Encryption Flow
 
 1. On registration, the browser generates a 4096-bit RSA-OAEP keypair with SHA-256.
 2. The public key is exported as base64 SPKI and sent to the backend.
@@ -28,7 +28,7 @@ Open `http://localhost:4173`. Web Crypto requires a secure context; `localhost` 
 8. The app sends only `ciphertext`, `iv`, `encryptedKey`, and `encryptedKeyForSelf` to WhisperBox.
 9. The recipient decrypts the AES key locally with their private RSA key, then decrypts the message with AES-GCM.
 
-## Key Management
+# Key Management
 
 - Plaintext private keys are never sent to the backend.
 - The active private key is held only as a non-extractable `CryptoKey` in memory.
@@ -36,11 +36,11 @@ Open `http://localhost:4173`. Web Crypto requires a secure context; `localhost` 
 - On restored sessions, the user must enter their password to unwrap the private key before messages can be decrypted.
 - Access tokens are kept in `sessionStorage`; refresh tokens and wrapped key material are stored in IndexedDB.
 
-## Backend Boundary
+# Backend Boundary
 
 The backend is used only for authentication, public key distribution, encrypted message storage, conversation history, and WebSocket routing. It receives opaque encrypted blobs and cannot decrypt message contents because it never receives an unwrapped private key or a plaintext AES message key.
 
-## Security Notes
+# Security Notes
 
 - The app uses Web Crypto primitives instead of custom cryptography.
 - AES-GCM IVs are generated randomly per message.

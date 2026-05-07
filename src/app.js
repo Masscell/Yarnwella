@@ -928,7 +928,6 @@ function renderMessages() {
           <h2>${escapeHtml(state.activeUser.display_name)}</h2>
           <p>@${escapeHtml(state.activeUser.username)} · <span class="status ${state.socketStatus}">${state.socketStatus}</span></p>
         </div>
-        <span class="secure-pill">lock E2EE</span>
       </header>
       <div class="messages" id="messages">
         ${messages.join("") || '<div class="empty-state">No messages in this thread yet.</div>'}
