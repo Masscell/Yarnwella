@@ -52,6 +52,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizeUsername(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 function formatTime(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -334,11 +338,17 @@ async function request(path, options = {}) {
     let details = "";
     try {
       const errorBody = await response.json();
-      details = errorBody.detail ? JSON.stringify(errorBody.detail) : "";
+      if (typeof errorBody.detail === "string") {
+        details = errorBody.detail;
+      } else if (errorBody.detail) {
+        details = JSON.stringify(errorBody.detail);
+      }
     } catch {
       details = await response.text();
     }
-    throw new Error(details || `Request failed with ${response.status}`);
+    const error = new Error(details || `Request failed with ${response.status}`);
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;
@@ -409,10 +419,11 @@ async function register(form) {
       throw new Error("Passwords do not match");
     }
     const keys = await generateAccountKeys(form.password);
+    const username = normalizeUsername(form.username);
     const response = await request("/auth/register", {
       method: "POST",
       body: {
-        username: form.username.trim(),
+        username,
         display_name: form.displayName.trim(),
         password: form.password,
         public_key: keys.public_key,
@@ -437,24 +448,43 @@ async function login(form) {
   render();
 
   try {
-    const response = await request("/auth/login", {
-      method: "POST",
-      body: {
-        username: form.username.trim(),
-        password: form.password
-      },
-      skipRefresh: true
-    });
+    const enteredUsername = String(form.username ?? "").trim();
+    const normalizedUsername = normalizeUsername(enteredUsername);
+    let response;
+
+    try {
+      response = await request("/auth/login", {
+        method: "POST",
+        body: {
+          username: enteredUsername,
+          password: form.password
+        },
+        skipRefresh: true
+      });
+    } catch (error) {
+      if (error.status !== 401 || enteredUsername === normalizedUsername) throw error;
+      response = await request("/auth/login", {
+        method: "POST",
+        body: {
+          username: normalizedUsername,
+          password: form.password
+        },
+        skipRefresh: true
+      });
+    }
+
     const privateKey = await unwrapPrivateKey(
       form.password,
       response.user.wrapped_private_key,
       response.user.pbkdf2_salt
     );
     await applyAuth(response, privateKey);
-    setBanner("Signed in. Your private key was unwrapped locally.", "success");
     await bootAuthenticated();
   } catch (error) {
-    setBanner(error.message || "Login failed", "error");
+    const message = error.status === 401
+      ? "Invalid username or password. Use the username you created, not your display name."
+      : error.message || "Login failed";
+    setBanner(message, "error");
   } finally {
     state.loading = false;
     render();
@@ -765,28 +795,31 @@ function renderBanner() {
 function renderAuth() {
   return `
     <main class="auth-screen">
-      <section class="brand-panel">
-        <img class="brand-logo" src="./public/logo.svg" alt="YarnWella logo" />
-        <h1>YarnWella</h1>
-        <p class="lede">Private encrypted messaging, built on end-to-end encryption standards.</p>
-      </section>
       <section class="auth-panel" aria-label="Authentication">
         ${renderBanner()}
-        <div class="tabs" role="tablist">
-          <button class="tab active" type="button" data-auth-tab="login">Sign in</button>
-          <button class="tab" type="button" data-auth-tab="register">Create account</button>
-        </div>
         <form id="login-form" class="auth-form">
-          <label>Username or Email<input name="username" autocomplete="username" placeholder="Enter your username" required /></label>
+          <div class="auth-heading">
+            <img class="brand-logo" src="./public/logo.png" alt="YarnWella logo" />
+            <h1>Log in</h1>
+            <p>Enter your username and password to securely access your encrypted messages.</p>
+          </div>
+          <label>Username<input name="username" autocomplete="username" placeholder="Username" required /></label>
           <label class="password-field">Password<input name="password" id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required /><button type="button" class="toggle-password" data-target="login-password" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
-          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Signing in..." : "Sign In"}</button>
+          <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Signing in..." : "Login"}</button>
+          <p class="auth-switch">Don't have an account? <button class="text-link" type="button" data-auth-tab="register">Sign Up here</button></p>
         </form>
         <form id="register-form" class="auth-form hidden">
+          <div class="auth-heading">
+            <img class="brand-logo" src="./public/logo.png" alt="YarnWella logo" />
+            <h1>Sign up</h1>
+            <p>Create your private account. Your encryption keys are generated in this browser.</p>
+          </div>
           <label>Full Name<input name="displayName" autocomplete="name" minlength="1" maxlength="128" placeholder="Your full name" required /></label>
           <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" placeholder="Choose a username" required /></label>
           <label class="password-field">Password<input name="password" id="register-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Create a strong password" required /><button type="button" class="toggle-password" data-target="register-password" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
           <label class="password-field">Confirm Password<input name="confirmPassword" id="register-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Confirm your password" required /><button type="button" class="toggle-password" data-target="register-confirm" aria-label="Toggle password visibility"><svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/></svg></button></label>
           <button class="primary" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Creating account..." : "Create Account"}</button>
+          <p class="auth-switch">Already have an account? <button class="text-link" type="button" data-auth-tab="login">Log in here</button></p>
         </form>
       </section>
     </main>
@@ -838,7 +871,7 @@ function renderConversations() {
     <aside class="sidebar">
       <div class="sidebar-head">
         <div class="signed-in-brand">
-          <img class="app-logo" src="./public/logo.svg" alt="" aria-hidden="true" />
+          <img class="app-logo" src="./public/logo.png" alt="" aria-hidden="true" />
           <div>
             <p class="eyebrow">Signed in</p>
             <h2>${escapeHtml(state.auth.user.display_name)}</h2>
@@ -864,7 +897,7 @@ function renderMessages() {
   if (!state.activeUser) {
     return `
       <section class="chat-empty">
-        <img class="empty-logo" src="./public/logo.svg" alt="" aria-hidden="true" />
+        <img class="empty-logo" src="./public/logo.png" alt="" aria-hidden="true" />
         <h2>Choose a conversation</h2>
         <p>YarnWella encrypts every message locally with AES-GCM, then wraps the message key for the intended recipient.</p>
       </section>
