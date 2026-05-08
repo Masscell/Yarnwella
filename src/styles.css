@@ -514,13 +514,6 @@ label:has(> #user-search) {
   background: var(--primary);
 }
 
-.lock {
-  color: var(--primary);
-  font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
 .workspace {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -558,16 +551,125 @@ label:has(> #user-search) {
   color: var(--ink);
 }
 
-.chat-empty p {
+.privacy-notice {
   max-width: 480px;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.new-chat-notice {
+  align-self: center;
+  max-width: 520px;
+  margin: auto;
+  text-align: center;
+}
+
+.new-chat-notice .privacy-notice {
+  margin: 0;
+}
+
+.inline-link {
+  border: 0;
+  background: transparent;
+  color: var(--primary-dark);
+  font-weight: 800;
+  padding: 0;
+}
+
+.inline-link:hover {
+  color: var(--primary);
 }
 
 .empty-logo {
   width: 92px;
   height: 92px;
   object-fit: contain;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.36);
+}
+
+.privacy-modal {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(860px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 24px 48px 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.modal-close:hover {
+  color: var(--ink);
+  background: var(--line);
+}
+
+.privacy-illustration {
+  width: min(300px, 80%);
+  height: auto;
+  margin-bottom: 46px;
+}
+
+.privacy-modal h2 {
+  margin-bottom: 16px;
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.privacy-copy {
+  max-width: 510px;
+  margin: 0 auto 34px;
+  font-size: 1.24rem;
+  line-height: 1.42;
+}
+
+.privacy-list {
+  display: grid;
+  gap: 30px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0;
+  text-align: left;
+  list-style: none;
+}
+
+.privacy-list li {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 1.25rem;
+}
+
+.privacy-list svg {
+  flex: 0 0 auto;
+  color: #111;
 }
 
 .chat-panel {
@@ -739,5 +841,22 @@ label:has(> #user-search) {
 
   .chat-head {
     padding: 12px;
+  }
+
+  .privacy-modal {
+    padding: 22px 22px 32px;
+  }
+
+  .privacy-illustration {
+    margin-bottom: 34px;
+  }
+
+  .privacy-modal h2 {
+    font-size: 1.65rem;
+  }
+
+  .privacy-copy,
+  .privacy-list li {
+    font-size: 1rem;
   }
 }

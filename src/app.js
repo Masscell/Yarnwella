@@ -23,7 +23,8 @@ const state = {
   composer: "",
   searchQuery: "",
   searchLoading: false,
-  cryptoLocked: false
+  cryptoLocked: false,
+  privacyModalOpen: false
 };
 
 const enc = new TextEncoder();
@@ -323,11 +324,19 @@ async function request(path, options = {}) {
     headers.Authorization = `Bearer ${state.auth.accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+  } catch (error) {
+    const requestError = new Error("Could not reach the YarnWella server. Check your connection and try again.");
+    requestError.cause = error;
+    requestError.isNetworkError = true;
+    throw requestError;
+  }
 
   if (response.status === 401 && state.auth?.refreshToken && !options.skipRefresh) {
     const refreshed = await refreshAccessToken();
@@ -483,7 +492,9 @@ async function login(form) {
   } catch (error) {
     const message = error.status === 401
       ? "Invalid username or password. Use the username you created, not your display name."
-      : error.message || "Login failed";
+      : error.status >= 500 || error.isNetworkError
+        ? "Login server is unavailable right now. Please check your connection and try again."
+        : error.message || "Login failed";
     setBanner(message, "error");
   } finally {
     state.loading = false;
@@ -503,7 +514,6 @@ async function unlockWithPassword(password) {
       state.auth.user.pbkdf2_salt
     );
     state.cryptoLocked = false;
-    setBanner("Message vault unlocked for this session.", "success");
     await bootAuthenticated();
   } catch {
     setBanner("That password could not unlock the local key vault.", "error");
@@ -563,7 +573,6 @@ async function logout() {
     // Local logout still clears sensitive in-memory keys if the network is unavailable.
   }
   await clearSession();
-  setBanner("Logged out. Plaintext keys were cleared from memory.", "info");
 }
 
 async function loadConversations() {
@@ -855,7 +864,6 @@ function renderConversations() {
           <strong>${escapeHtml(conversation.display_name)}</strong>
           <small>@${escapeHtml(conversation.username)} · ${formatTime(conversation.last_message_at) || "No messages yet"}</small>
         </span>
-        <span class="lock" title="End-to-end encrypted">lock</span>
       </button>
     `;
   });
@@ -894,12 +902,20 @@ function renderConversations() {
 }
 
 function renderMessages() {
+  const privacyNotice = `
+    <p class="privacy-notice">
+      End-to-end encryption keeps your personal messages and calls between you and the people you choose.
+      No one outside of the chat, not even YarnWella can read, listen to, or share them.
+      <button class="inline-link" type="button" data-action="open-privacy-modal">Read more</button>
+    </p>
+  `;
+
   if (!state.activeUser) {
     return `
       <section class="chat-empty">
         <img class="empty-logo" src="./public/logo.png" alt="" aria-hidden="true" />
         <h2>Choose a conversation</h2>
-        <p>YarnWella encrypts every message locally with AES-GCM, then wraps the message key for the intended recipient.</p>
+        ${privacyNotice}
       </section>
     `;
   }
@@ -911,7 +927,6 @@ function renderMessages() {
         <div class="bubble ${message.decryptError ? "failed" : ""}">
           <p>${message.decryptError ? "Unable to decrypt this message." : escapeHtml(message.plaintext)}</p>
           <footer>
-            <span title="End-to-end encrypted">lock</span>
             <time>${formatTime(message.created_at)}</time>
             ${message.delivered ? "<small>delivered</small>" : "<small>queued</small>"}
           </footer>
@@ -930,13 +945,61 @@ function renderMessages() {
         </div>
       </header>
       <div class="messages" id="messages">
-        ${messages.join("") || '<div class="empty-state">No messages in this thread yet.</div>'}
+        ${messages.join("") || `<div class="empty-state new-chat-notice">${privacyNotice}</div>`}
       </div>
       <form id="composer-form" class="composer">
-        <textarea id="composer" placeholder="Write an encrypted message" rows="1">${escapeHtml(state.composer)}</textarea>
+        <textarea id="composer" placeholder="Type a message" rows="1">${escapeHtml(state.composer)}</textarea>
         <button class="primary send" type="submit" ${state.composer.trim() ? "" : "disabled"}>Send</button>
       </form>
     </section>
+  `;
+}
+
+function privacyIcon(path) {
+  return `
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+      <path d="${path}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+  `;
+}
+
+function renderPrivacyModal() {
+  if (!state.privacyModalOpen) return "";
+  const items = [
+    ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z M8 8h8 M8 12h6", "Text and voice messages"],
+    ["M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.11 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.62 2.61a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.47-1.19a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.61.62A2 2 0 0 1 22 16.92z", "Audio and video calls"],
+    ["M4 4h16v16H4z M8 16l3-3 2 2 3-4 4 5 M8 8h.01 M2 8v14h14", "Photos, videos and documents"],
+    ["M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z M12 10h.01", "Location sharing"],
+    ["M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z M4.93 4.93l2.12 2.12 M16.95 16.95l2.12 2.12 M19.07 4.93l-2.12 2.12 M7.05 16.95l-2.12 2.12", "Status updates"]
+  ];
+
+  return `
+    <div class="modal-backdrop" role="presentation">
+      <section class="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+        <button class="modal-close" type="button" data-action="close-privacy-modal" aria-label="Close">x</button>
+        <svg class="privacy-illustration" viewBox="0 0 280 150" aria-hidden="true">
+          <circle cx="86" cy="74" r="40" fill="#fffaf0" stroke="#111827" stroke-width="3"/>
+          <path d="M62 59l53 33M116 58L63 92" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+          <rect x="104" y="50" width="92" height="66" rx="18" fill="#dcfce7" stroke="#111827" stroke-width="3"/>
+          <path d="M126 50V32a24 24 0 0 1 48 0v18" fill="none" stroke="#111827" stroke-width="4"/>
+          <circle cx="150" cy="76" r="10" fill="#dcfce7" stroke="#111827" stroke-width="3"/>
+          <path d="M150 86l-12 26h24z" fill="#dcfce7" stroke="#111827" stroke-width="3"/>
+          <circle cx="203" cy="71" r="43" fill="#25d366" stroke="#111827" stroke-width="3"/>
+          <path d="M189 78l22-22" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="221" cy="43" r="2.5" fill="#111827"/>
+          <circle cx="234" cy="65" r="2.5" fill="#111827"/>
+          <circle cx="228" cy="90" r="2.5" fill="#111827"/>
+          <rect x="173" y="116" width="89" height="16" rx="8" fill="#f9fafb" stroke="#111827" stroke-width="3"/>
+          <rect x="173" y="116" width="50" height="16" rx="8" fill="#25d366" stroke="#111827" stroke-width="3"/>
+          <circle cx="224" cy="124" r="16" fill="#25d366" stroke="#111827" stroke-width="3"/>
+        </svg>
+        <h2 id="privacy-title">Your chats and calls are private</h2>
+        <p class="privacy-copy">End-to-end encryption keeps your personal messages and calls between you and the people you choose. No one outside of the chat, not even YarnWella, can read, listen to, or share them. This includes your:</p>
+        <ul class="privacy-list">
+          ${items.map(([icon, label]) => `<li>${privacyIcon(icon)}<span>${label}</span></li>`).join("")}
+        </ul>
+      </section>
+    </div>
   `;
 }
 
@@ -949,10 +1012,16 @@ function renderApp() {
         ${renderMessages()}
       </section>
     </main>
+    ${renderPrivacyModal()}
   `;
 }
 
 function render() {
+  const activeElement = document.activeElement;
+  const restoreSearchFocus = activeElement?.id === "user-search";
+  const searchSelectionStart = restoreSearchFocus ? activeElement.selectionStart : null;
+  const searchSelectionEnd = restoreSearchFocus ? activeElement.selectionEnd : null;
+
   if (!state.auth) {
     app.innerHTML = renderAuth();
   } else if (state.cryptoLocked) {
@@ -962,6 +1031,17 @@ function render() {
     requestAnimationFrame(() => {
       const messages = document.querySelector("#messages");
       if (messages) messages.scrollTop = messages.scrollHeight;
+    });
+  }
+
+  if (restoreSearchFocus) {
+    requestAnimationFrame(() => {
+      const searchInput = document.querySelector("#user-search");
+      if (!searchInput) return;
+      searchInput.focus();
+      if (searchSelectionStart !== null && searchSelectionEnd !== null) {
+        searchInput.setSelectionRange(searchSelectionStart, searchSelectionEnd);
+      }
     });
   }
 }
@@ -1016,6 +1096,18 @@ app.addEventListener("click", async (event) => {
     render();
   }
 
+  if (target.dataset.action === "open-privacy-modal") {
+    state.privacyModalOpen = true;
+    render();
+    return;
+  }
+
+  if (target.dataset.action === "close-privacy-modal") {
+    state.privacyModalOpen = false;
+    render();
+    return;
+  }
+
   if (target.dataset.action === "logout") await logout();
 
   if (target.dataset.openUser) {
@@ -1039,6 +1131,7 @@ app.addEventListener("input", (event) => {
   const target = event.target;
 
   if (target?.id === "user-search") {
+    state.searchQuery = target.value;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => searchUsers(target.value), 250);
   }
